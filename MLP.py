@@ -9,6 +9,6 @@ class MLP(Classifier):
     # The abstract method from the base class is implemeted here to return a svm classifier
     def buildClassifier(self, X_features, Y_train):
 
-        clf = MLPClassifier(solver='lbfgs', alpha=1e-5, hidden_layer_sizes=(5, 2),
+        clf = MLPClassifier(solver='lbfgs', alpha=1e-5, hidden_layer_sizes=(100, ),
                             random_state=1).fit(X_features, Y_train)
         return clf

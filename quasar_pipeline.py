@@ -72,8 +72,8 @@ class Pipeline(object):
         print("F-measure: " + str(f))
 
         # Correctly answered questions
-        correct_questions_indices = np.where(np.equal(Y_val_pred, Y_val_true))
-        correct_questions = X_val[correct_questions_indices]
+        # correct_questions_indices = np.where(np.equal(Y_val_pred, Y_val_true))
+        # correct_questions = X_val[correct_questions_indices]
 
         # Save predictions in json
         results = {'feature': self.featurizerInstance.__class__.__name__,
@@ -82,7 +82,7 @@ class Pipeline(object):
                    'precision': p,
                    'recall': r,
                    'F-measure': f,
-                   'Correct questions': correct_questions}
+                   'predictions': Y_val_pred}
         file = open(os.path.join(self.PATH, self.featurizerInstance.__class__.__name__ +
                                  self.classifierInstance.__class__.__name__), 'w', encoding='utf-8')
         json.dump(results, file, ensure_ascii=False)
@@ -92,12 +92,20 @@ if __name__ == '__main__':
     trainFilePath = sys.argv[1]  # please give the path to your reformatted quasar-s json train file
     valFilePath = sys.argv[2]  # provide the path to val file
     retrievalInstance = Retrieval()
-    # featurizerInstance = CountFeaturizer()
-    # classifierInstance = MultinomialNaiveBayes()
-    # trainInstance = Pipeline(trainFilePath, valFilePath, retrievalInstance,
-    # featurizerInstance, classifierInstance)
 
-    featurizerInstance = TfidfFeaturizer()
-    classifierInstance = SVM()
-    trainInstance = Pipeline(trainFilePath, valFilePath, retrievalInstance,
-                             featurizerInstance, classifierInstance)
+    # Featurizers
+    countfeaturizerInstance = CountFeaturizer()
+    tfidffeaturizerInstance = TfidfFeaturizer()
+    featurizerInstances = [countfeaturizerInstance, tfidffeaturizerInstance]
+
+    # Classifiers
+    MNBclassifierInstance = MultinomialNaiveBayes()
+    SVMclassifierInstance = SVM()
+    MLPclassifierInstance = MLP()
+    classifierInstances = [MNBclassifierInstance, SVMclassifierInstance, MLPclassifierInstance]
+
+    # all 2 x 3 combinations
+    for featurizer in range(len(featurizerInstances)):
+        for classifier in range(len(classifierInstances)):
+            trainInstance = Pipeline(trainFilePath, valFilePath, retrievalInstance,
+                                     featurizer, classifier)
