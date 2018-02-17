@@ -18,7 +18,7 @@ import numpy as np
 
 
 class Pipeline(object):
-    def __init__(self, trainFilePath, valFilePath, retrievalInstance, featurizerInstance, classifierInstance):
+    def __init__(self, trainFilePath, valFilePath, retrievalInstance, featurizerInstance, classifierInstance, resultsPATH):
         self.retrievalInstance = retrievalInstance
         self.featurizerInstance = featurizerInstance
         self.classifierInstance = classifierInstance
@@ -28,9 +28,8 @@ class Pipeline(object):
         valfile = open(valFilePath, 'r')
         self.valData = json.load(valfile)
         valfile.close()
+        self.PATH = resultsPATH
         self.question_answering()
-        self.PATH = os.path.join('./Results', datetime.now().strftime("%Y%m%d-%H%M%S"))
-        os.mkdir(self.PATH)
 
     def makeXY(self, dataQuestions):
         X = []
@@ -46,13 +45,12 @@ class Pipeline(object):
         return X, Y
 
     def question_answering(self):
-        # pdb.set_trace()
         print('Loading data...')
         dataset_type = self.trainData['origin']
         candidate_answers = self.trainData['candidates']
         X_train, Y_train = self.makeXY(self.trainData['questions'][0:30000])  # 31049 questions
         X_val, Y_val_true = self.makeXY(self.valData['questions'])
-        # pdb.set_trace()
+
         # featurization
         print('Feature Extraction...')
         X_features_train, X_features_val = self.featurizerInstance.getFeatureRepresentation(
@@ -66,6 +64,7 @@ class Pipeline(object):
         self.evaluatorInstance = Evaluator()
         a = self.evaluatorInstance.getAccuracy(Y_val_true, Y_val_pred)
         p, r, f = self.evaluatorInstance.getPRF(Y_val_true, Y_val_pred)
+
         print("Accuracy: " + str(a))
         print("Precision: " + str(p))
         print("Recall: " + str(r))
@@ -78,11 +77,12 @@ class Pipeline(object):
         # Save predictions in json
         results = {'feature': self.featurizerInstance.__class__.__name__,
                    'classifier': self.classifierInstance.__class__.__name__,
+                   'training size': len(X_train),
                    'accuracy': a,
                    'precision': p,
                    'recall': r,
                    'F-measure': f,
-                   'predictions': Y_val_pred}
+                   'predictions': Y_val_pred.tolist()}
         file = open(os.path.join(self.PATH, self.featurizerInstance.__class__.__name__ +
                                  self.classifierInstance.__class__.__name__), 'w', encoding='utf-8')
         json.dump(results, file, ensure_ascii=False)
@@ -92,6 +92,8 @@ if __name__ == '__main__':
     trainFilePath = sys.argv[1]  # please give the path to your reformatted quasar-s json train file
     valFilePath = sys.argv[2]  # provide the path to val file
     retrievalInstance = Retrieval()
+    resultsPATH = os.path.join('./Results', datetime.now().strftime("%Y%m%d-%H%M%S"))
+    os.makedirs(resultsPATH)
 
     # Featurizers
     countfeaturizerInstance = CountFeaturizer()
@@ -105,7 +107,7 @@ if __name__ == '__main__':
     classifierInstances = [MNBclassifierInstance, SVMclassifierInstance, MLPclassifierInstance]
 
     # all 2 x 3 combinations
-    for featurizer in range(len(featurizerInstances)):
-        for classifier in range(len(classifierInstances)):
+    for featurizer in featurizerInstances:
+        for classifier in classifierInstances:
             trainInstance = Pipeline(trainFilePath, valFilePath, retrievalInstance,
-                                     featurizer, classifier)
+                                     featurizer, classifier, resultsPATH)
